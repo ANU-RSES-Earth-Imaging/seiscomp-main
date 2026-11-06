@@ -34,6 +34,9 @@
 
 #define _T(name) _db->driver()->convertColumnName(name)
 
+// RCP edit
+const double MAX_IGNORED_GAP_SECONDS = 10;
+
 using namespace std;
 using namespace Seiscomp::DataModel;
 
@@ -270,14 +273,17 @@ void Worker::processExtent(DataExtent *extent, bool foundInDB) {
 		// - force scan if segments overlapping chunk start time were found
 		if ( !prevChunkEndTime || chunkWindow.startTime() > prevChunkEndTime) {
 			if ( prevChunkEndTime) {
-				SEISCOMP_DEBUG("[%i] %s: Detected chunk gap: %s ~ %s",
+				double gapLength = (chunkWindow.startTime() - *prevChunkEndTime).length();
+				if (gapLength > MAX_IGNORED_GAP_SECONDS) {
+					SEISCOMP_DEBUG("[%i] %s: Detected chunk gap: %s ~ %s",
 				               _id, _sid.c_str(), prevChunkEndTime->iso().c_str(),
 				               chunkWindow.startTime().iso().c_str());
-				// trigger read if previous DB segment was overlapping
-				// chunkWindow startTime
-				if ( readTrigger.empty() && dbSeg &&
-				     dbSeg->end() > chunkWindow.startTime() ) {
-					readTrigger = "new chunk gap";
+					// trigger read if previous DB segment was overlapping
+					// chunkWindow startTime
+					if ( readTrigger.empty() && dbSeg &&
+						dbSeg->end() > chunkWindow.startTime() ) {
+						readTrigger = "new chunk gap";
+					}
 				}
 			}
 
