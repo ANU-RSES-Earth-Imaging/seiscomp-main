@@ -15,6 +15,7 @@
 
 #include "dbquery.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
@@ -89,7 +90,7 @@ void DBQuery::setQuery(const std::string& query)
 
 		// Get parameter
 		std::string param = _query.substr(pos0, pos1-pos0);
-		if ( find(_parameter.begin(), _parameter.end(), param) == _parameter.end() )
+		if ( std::find(_parameter.begin(), _parameter.end(), param) == _parameter.end() )
 			_parameter.push_back(param);
 		pos0 = pos1 + _stopWord.size();
 	}
