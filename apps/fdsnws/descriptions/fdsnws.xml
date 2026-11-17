@@ -129,6 +129,14 @@
 				'https://test.domain.de, https://production.domain.de'.
 				</description>
 			</parameter>
+			<parameter name="trustedProxies" type="list:string:" default="127.0.0.0/8">
+				<description>
+				List of IP addresses or masks to validate the proxy identities
+				presented in an X-Forarded-For or Forwarded header.
+
+				By default, this only trusts proxies on the localhost.
+				</description>
+			</parameter>
 			<parameter name="allowRestricted" type="boolean" default="true">
 				<description>
 				Enable/disable access to restricted inventory data.

@@ -18,6 +18,7 @@
 
 import base64
 import fnmatch
+import ipaddress
 import os
 import re
 import signal
@@ -382,7 +383,10 @@ class FDSNWS(seiscomp.client.Application):
         self._requestLogFile = ""
         self._userSalt = ""
         self._corsOrigins = ["*"]
-
+        self._trustedProxies = [
+            ipaddress.ip_network("127.0.0.0/8"),
+            ipaddress.ip_network("::1/128"),
+        ]
         self._allowRestricted = True
         self._useAccess = False
         self._serveDataSelect = True
@@ -529,6 +533,12 @@ class FDSNWS(seiscomp.client.Application):
         # list of allowed CORS origins
         try:
             self._corsOrigins = list(filter(None, self.configGetStrings("corsOrigins")))
+        except Exception:
+            pass
+
+        # List of trusted proxies
+        try:
+            self._trustedProxies = [ipaddress.ip_network(x) for x in filter(None, self.configGetStrings("trustedProxies"))]
         except Exception:
             pass
 

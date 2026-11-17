@@ -6,6 +6,7 @@ import subprocess
 import logging
 import logging.handlers
 import threading
+import ipaddress
 
 
 from .utils import b_str
@@ -46,6 +47,7 @@ class Tracker:
             "auth": bool(userName),
             "userLocation": {},
             "created": f"{datetime.datetime.utcnow().isoformat()}Z",
+            "userIP": userIP,
         }
 
         if geoip:

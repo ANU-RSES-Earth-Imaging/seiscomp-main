@@ -15,6 +15,7 @@
 ################################################################################
 
 import time
+import ipaddress
 
 from io import BytesIO
 
@@ -559,6 +560,35 @@ class FDSNDataSelect(BaseResource):
 
             yield stream, True
 
+    # --------------------------------------------------------------------------
+
+    def _parseHeaderAddress(self, straddr):
+        """
+        Given a string formatted IP address, translate it to an ipaddress
+        object either by parsing it using a flexible v4/v6 parsers, or by
+        stripping square brackets from a v6 address.
+
+        Returns either a valid ipaddress.IPv4Address or ipaddress.IPv6Address
+        object, or throws ValueError.
+        """
+        straddr = str(straddr).strip()
+        if straddr[0] == '[':
+            # must be a v6 address.
+            if straddr[-1] != ']':
+                raise ValueError('Mismatched brackets on address')
+            return ipaddress.IPv6Address(straddr[1:-1])
+        return ipaddress.ip_address(straddr)
+
+    def _isAddressInList(self, ipaddr, netslist):
+        """
+        Does the address ipaddr appear in a network covered by any of the
+        IPNetworks in netslist?
+        """
+        for net in netslist:
+            if ipaddr in net:
+                return True
+        return False
+
     # ---------------------------------------------------------------------------
     def _processRequest(self, req, ro):
         # pylint: disable=W0212
@@ -587,11 +617,30 @@ class FDSNDataSelect(BaseResource):
         userIP = ""
 
         if app._trackdbEnabled or app._requestLog:
-            xff = req.requestHeaders.getRawHeaders("x-forwarded-for")
-            if xff:
-                userIP = xff[0].split(",")[0].strip()
-            else:
-                userIP = req.getClientIP()
+            # always start with the direct requestor
+            try:
+                userIP = self._parseHeaderAddress(req.getClientIP())
+            except Exception:
+                pass
+
+            # we need to consider any forwarding headers.
+            #
+            # first, break down the xff raw header into a list of components.
+            xffRaw = req.requestHeaders.getRawHeaders("x-forwarded-for")
+            xff = []
+            if xffRaw is not None:
+                xff = [x.strip() for x in xffRaw[0].split(',')]
+
+            # now, if the most recently accepted peer address is a trusted proxy, pick the
+            # next last address in the x-f-f.   Repeat this until either we run out of forwarded
+            # addresses, or the address is not a trusted proxy.
+            while len(xff) > 0 and self._isAddressInList(userIP, app._trustedProxies):
+                try:
+                    lastAddr = self._parseHeaderAddress(xff[-1])
+                    userIP = lastAddr
+                    xff = xff[:-1]
+                except Exception:
+                    break
 
             clientID = req.getHeader("User-Agent")
             if clientID:
@@ -614,14 +663,14 @@ class FDSNDataSelect(BaseResource):
                 userID,
                 f"REQUEST WAVEFORM {reqID}",
                 "fdsnws",
-                userIP,
+                str(userIP),
                 req.getClientIP(),
             )
 
             trackerList.append(tracker)
 
         if app._requestLog:
-            tracker = app._requestLog.tracker(ro.service, ro.userName, userIP, clientID)
+            tracker = app._requestLog.tracker(ro.service, ro.userName, str(userIP), clientID)
             trackerList.append(tracker)
 
         # Open record stream
