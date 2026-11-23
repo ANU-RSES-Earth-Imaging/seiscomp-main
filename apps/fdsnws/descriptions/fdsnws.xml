@@ -137,6 +137,12 @@
 				By default, this only trusts proxies on the localhost.
 				</description>
 			</parameter>
+			<parameter name="geoipDatabaseFile" type="string" default="">
+				<description>
+				Path to a maxmind geoip/geoipLite database file with which to do
+				geolocation lookups.
+				</description>
+			</parameter>
 			<parameter name="allowRestricted" type="boolean" default="true">
 				<description>
 				Enable/disable access to restricted inventory data.

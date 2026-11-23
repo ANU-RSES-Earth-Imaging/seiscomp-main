@@ -387,6 +387,7 @@ class FDSNWS(seiscomp.client.Application):
             ipaddress.ip_network("127.0.0.0/8"),
             ipaddress.ip_network("::1/128"),
         ]
+        self._geoipDatabaseFile = ""
         self._allowRestricted = True
         self._useAccess = False
         self._serveDataSelect = True
@@ -539,6 +540,11 @@ class FDSNWS(seiscomp.client.Application):
         # List of trusted proxies
         try:
             self._trustedProxies = [ipaddress.ip_network(x) for x in filter(None, self.configGetStrings("trustedProxies"))]
+        except Exception:
+            pass
+
+        try:
+            self._geoipDatabaseFile = self.configGetString("geoipDatabaseFile")
         except Exception:
             pass
 
@@ -1427,7 +1433,7 @@ configuration read:
                 # needed
                 from seiscomp.fdsnws.reqlog import RequestLog  # pylint: disable=C0415
 
-                self._requestLog = RequestLog(self._requestLogFile, self._userSalt)
+                self._requestLog = RequestLog(self._requestLogFile, self._userSalt, self._geoipDatabaseFile)
 
             for user in self._authBlacklist:
                 self._userdb.blacklistUser(user)

@@ -51,7 +51,12 @@ class Tracker:
         }
 
         if geoip:
-            self.__data["userLocation"]["country"] = geoip.country_code_by_addr(userIP)
+            try:
+                geo_res = geoip.country(userIP)
+                if geo_res:
+                    self.__data["userLocation"]["country"] = geo_res.country.iso_code
+            except Exception:
+                pass
 
         if (
             (userName and userName.lower().endswith("@gfz-potsdam.de"))
@@ -116,19 +121,21 @@ class Tracker:
 
 
 class RequestLog:
-    def __init__(self, filename, userSalt):
+    def __init__(self, filename, userSalt, geoipDatabaseFile=None):
         self.__logger = logging.getLogger("seiscomp.fdsnws.reqlog")
         self.__logger.addHandler(MyFileHandler(filename))
         self.__logger.setLevel(logging.INFO)
         self.__userSalt = userSalt
+        self.__geoip = None
 
-        try:
-            import GeoIP
+        if geoipDatabaseFile:
+            try:
+                import geoip2.database
 
-            self.__geoip = GeoIP.new(GeoIP.GEOIP_MEMORY_CACHE)
+                self.__geoip = geoip2.database.Reader(geoipDatabaseFile)
 
-        except ImportError:
-            self.__geoip = None
+            except ImportError:
+                self.__geoip = None
 
     def tracker(self, service, userName, userIP, clientID):
         return Tracker(
